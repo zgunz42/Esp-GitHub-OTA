@@ -46,7 +46,7 @@ GitHubOTA::GitHubOTA(
   Updater.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
 }
 
-void GitHubOTA::handle()
+void GitHubOTA::handle(BearSSL::WiFiClientSecure *client, String proxyUrl)
 {
   const char *TAG = "handle";
   synchronize_system_time();
@@ -62,7 +62,7 @@ void GitHubOTA::handle()
 
   if (update_required(_new_version, _version))
   {
-    auto result = update_firmware(base_url + _firmware_name);
+    auto result = !proxyUrl.isEmpty() ? update_firmware(client, proxyUrl) : update_firmware(client, base_url + _firmware_name);
 
     if (result != HTTP_UPDATE_OK)
     {
@@ -78,12 +78,21 @@ void GitHubOTA::handle()
   ESP_LOGI(TAG, "No updates found\n");
 }
 
-HTTPUpdateResult GitHubOTA::update_firmware(String url)
+HTTPUpdateResult GitHubOTA::update_firmware(BearSSL::WiFiClientSecure *client, String url)
 {
   const char *TAG = "update_firmware";
   ESP_LOGI(TAG, "Download URL: %s\n", url.c_str());
-
-  auto result = Updater.update(_wifi_client, url);
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    ESP_LOGE(TAG, "WiFi not connected\n");
+  }
+  if (!client->connect(url.c_str(), 443))
+  {
+    ESP_LOGE(TAG, "Could not connect to server\n");
+  }
+  
+  ESP_LOGE(TAG, url.c_str());
+  auto result = Updater.update(*client, url);
 
   print_update_result(Updater, result, TAG);
   return result;

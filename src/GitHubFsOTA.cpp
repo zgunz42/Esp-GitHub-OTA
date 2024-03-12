@@ -47,7 +47,7 @@ GitHubFsOTA::GitHubFsOTA(
   Updater.setFollowRedirects(HTTPC_FORCE_FOLLOW_REDIRECTS);
 }
 
-void GitHubFsOTA::handle()
+void GitHubFsOTA::handle(BearSSL::WiFiClientSecure *client, String proxyUrl)
 {
   const char *TAG = "handle";
   synchronize_system_time();
@@ -63,7 +63,7 @@ void GitHubFsOTA::handle()
 
   if (update_required(_new_version, _version))
   {
-    auto result = update_filesystem(base_url + _filesystem_name);
+    auto result = !proxyUrl.isEmpty() ? update_filesystem(client, proxyUrl) : update_filesystem(client, base_url + _filesystem_name);
 
     if (result != HTTP_UPDATE_OK)
     {
@@ -79,13 +79,24 @@ void GitHubFsOTA::handle()
   ESP_LOGI(TAG, "No updates found\n");
 }
 
-HTTPUpdateResult GitHubFsOTA::update_filesystem(String url)
+HTTPUpdateResult GitHubFsOTA::update_filesystem(BearSSL::WiFiClientSecure *client, String url)
 {
   const char *TAG = "update_filesystem";
   ESP_LOGI(TAG, "Download URL: %s\n", url.c_str());
 
 #ifdef ESP8266
-  auto result = Updater.updateFS(_wifi_client, url);
+
+  if (WiFi.status() != WL_CONNECTED)
+  {
+    ESP_LOGE(TAG, "WiFi not connected\n");
+  }
+
+  if (client->connect(url.c_str(), 443))
+  {
+    ESP_LOGE(TAG, "Could not connect to server\n" );
+  }
+  ESP_LOGE(TAG, url.c_str());
+  auto result = Updater.updateFS(*client, url);
 #elif defined(ESP32)
   auto result = Updater.updateSpiffs(_wifi_client, url);
 #endif

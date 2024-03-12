@@ -18,9 +18,10 @@ public:
       String version,
       String release_url,
       String filesystem_name = "filesystem.bin",
-      bool fetch_url_via_redirect = false);
+      bool fetch_url_via_redirect = false
+      );
 
-  void handle();
+  void handle(BearSSL::WiFiClientSecure *client, String proxyUrl = "");
 
 private:
 #ifdef ESP8266
@@ -29,7 +30,7 @@ private:
   HTTPUpdate Updater;
 #endif
 
-  HTTPUpdateResult update_filesystem(String url);
+  HTTPUpdateResult update_filesystem(BearSSL::WiFiClientSecure *client, String url);
 
   semver_t _version;
   String _release_url;

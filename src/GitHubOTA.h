@@ -4,6 +4,7 @@
 #ifdef ESP8266
 #include <ESP8266WiFi.h>
 #include <ESP8266httpUpdate.h>
+#include <CertStoreBearSSL.h>
 #elif defined(ESP32)
 #include <WiFiClientSecure.h>
 #include <HTTPUpdate.h>
@@ -20,7 +21,7 @@ public:
       String firmware_name = "firmware.bin",
       bool fetch_url_via_redirect = false);
 
-  void handle();
+  void handle( BearSSL::WiFiClientSecure *client, String proxyUrl = "");
 
 private:
 #ifdef ESP8266
@@ -29,7 +30,7 @@ private:
   HTTPUpdate Updater;
 #endif
 
-  HTTPUpdateResult update_firmware(String url);
+  HTTPUpdateResult update_firmware( BearSSL::WiFiClientSecure *client, String url);
 
   semver_t _version;
   String _release_url;
